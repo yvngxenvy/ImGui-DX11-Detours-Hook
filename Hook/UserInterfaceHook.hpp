@@ -18,6 +18,31 @@ enum DirectXHookStatus {
 
 typedef HRESULT(*PresentType) (IDXGISwapChain* pSwapChain, UINT SyncInterval, UINT Flags); // Function for presenting a rendered image for DirectX
 
+struct UserInterfaceWindowInfo {
+	// New Variables For Dynamic GUI Loading
+	std::string WindowName;
+	bool* bOpenVariable;
+	std::pair<float, float> Size;
+	std::function<void()> ContentFn;
+	ImGuiWindowFlags Flags;
+
+	bool IsOpen();
+	bool IsInfoSet();
+
+	void Render();
+
+	void SetOpen(bool bNewValue);
+
+	UserInterfaceWindowInfo();
+	UserInterfaceWindowInfo(std::string _WindowName, bool* _bOpenVariable, std::pair<float, float> _Size, std::function<void()> _ContentFn, ImGuiWindowFlags _Flags);
+	~UserInterfaceWindowInfo();
+};
+
+namespace ImGuiSettings {
+	extern const bool bSavedFiles;
+	extern const bool bCanResize;
+}
+
 class UserInterfaceHook
 {
 private:
@@ -39,11 +64,7 @@ private:
 	static inline ID3D11DeviceContext* DeviceContext;
 	static inline ID3D11RenderTargetView* RenderTargetView;
 
-	// New Variables For Dynamic GUI Loading
-	static inline std::string WindowName;
-	static inline bool* bOpenVariable;
-	static inline std::pair<float, float> Size;
-	static inline std::function<void()> ContentFn;
+	static inline std::vector<UserInterfaceWindowInfo> WindowInfos;
 
 	HANDLE InternalThread;
 private:
@@ -64,9 +85,10 @@ private:
 public:
 	static std::string GetStringStatus(DirectXHookStatus Error);
 	static HWND GetGameWindow();
+	static bool IsAnyWindowOpen();
 
-	static void SetGuiInfo(std::string _WindowName, bool* _bOpenVariable, std::pair<float, float> _Size, std::function<void()> _ContentFn);
-	static bool IsInfoSet();
+	void AddWindowInfo(std::string WindowName, bool* bOpenVariable, std::pair<float, float> Size, std::function<void()> ContentFn, ImGuiWindowFlags Flags);
+	static bool IsWindowInfoSet();
 
 	static void Initialize();
 

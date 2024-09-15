@@ -24,7 +24,9 @@ void Initialize(HMODULE hModule) {
     
     LOG("Initialized Console");
 
-    UIHook.SetGuiInfo("ImGui Template Window", &bWindowOpen, { 500.f, 500.f }, ImGuiContent);
+    UIHook.AddWindowInfo("ImGui Template Window", &bWindowOpen, { 500.f, 500.f }, ImGuiContent, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings);
+    UIHook.AddWindowInfo("ImGui Template Window 2", &bWindowOpen, { 200.f, 200.f }, ImGuiContent, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings);
+
     UIHook.Initialize();
 }
 

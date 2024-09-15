@@ -1,6 +1,55 @@
 #include "UserInterfaceHook.hpp"
 
+namespace ImGuiSettings {
+	const bool bSavedFiles = false; // .Ini file for imgui, this saves Window Position and Size.
+	const bool bCanResize = false; // Adds a resize bar thing at the bottom right of a window
+}
+
 extern LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+
+bool UserInterfaceWindowInfo::IsOpen()
+{
+	return *bOpenVariable;
+}
+
+void UserInterfaceWindowInfo::Render()
+{
+	if (IsInfoSet()) {
+		if (IsOpen()) {
+			// Dynamically Render
+			ImGui::SetNextWindowSize(ImVec2(Size.first, Size.second), (ImGuiSettings::bCanResize ? ImGuiCond_Once : ImGuiCond_Always));
+
+			ImGui::Begin(WindowName.c_str(), bOpenVariable, Flags 
+				| (ImGuiSettings::bSavedFiles ? ImGuiWindowFlags_None : ImGuiWindowFlags_NoSavedSettings) 
+				| (ImGuiSettings::bCanResize ? ImGuiWindowFlags_None : ImGuiWindowFlags_NoResize));
+
+			// Function passed by user
+			ContentFn();
+
+			ImGui::End();
+		}
+	}
+}
+
+void UserInterfaceWindowInfo::SetOpen(bool bNewValue)
+{
+	*bOpenVariable = bNewValue;
+}
+
+bool UserInterfaceWindowInfo::IsInfoSet()
+{
+	if (bOpenVariable && ContentFn) {
+		return true;
+	}
+
+	return false;
+}
+
+UserInterfaceWindowInfo::UserInterfaceWindowInfo() : WindowName("Blank"), bOpenVariable(nullptr), Size({ 0.f, 0.f }), ContentFn(nullptr), Flags(ImGuiWindowFlags_None) {}
+
+UserInterfaceWindowInfo::UserInterfaceWindowInfo(std::string _WindowName, bool* _bOpenVariable, std::pair<float, float> _Size, std::function<void()> _ContentFn, ImGuiWindowFlags _Flags) : WindowName(_WindowName), bOpenVariable(_bOpenVariable), Size(_Size), ContentFn(_ContentFn), Flags(_Flags) {}
+
+UserInterfaceWindowInfo::~UserInterfaceWindowInfo() {}
 
 void UserInterfaceHook::CreateFakeClass()
 {
@@ -150,18 +199,8 @@ HRESULT UserInterfaceHook::PresentDetour(IDXGISwapChain* pSwapChain, UINT SyncIn
 	ImGui_ImplWin32_NewFrame();
 	ImGui::NewFrame();
 
-	ImGui::SetNextWindowSize({ 500.f, 500.f }, ImGuiCond_Once); 
-
-	if (IsInfoSet()) {
-		if (*bOpenVariable) {
-			// Dynamically Render
-			ImGui::Begin(WindowName.c_str(), bOpenVariable);
-			
-			// Function passed by user
-			ContentFn();
-
-			ImGui::End();
-		}
+	for (auto Info : WindowInfos) {
+		Info.Render();
 	}
 
 	// End Render
@@ -190,7 +229,7 @@ LRESULT UserInterfaceHook::WndProc(const HWND hWnd, UINT uMsg, WPARAM wParam, LP
 	// WndProc trampoline
 
 	// I don't know if theres any method in the ImGui library that can check if any window is currently opened, but if there is, please lmk!
-	if (*bOpenVariable == false) {
+	if (IsAnyWindowOpen() == false) {
 		return CallWindowProc(oWndProc, hWnd, uMsg, wParam, lParam);
 	}
 
@@ -242,7 +281,9 @@ void UserInterfaceHook::SetUpImGui()
 	ImGui::CreateContext();
 
 	ImGuiIO& io = ImGui::GetIO();
-	io.IniFilename = NULL;
+	if (ImGuiSettings::bSavedFiles == false) {
+		io.IniFilename = NULL;
+	}
 
 	io.WantCaptureKeyboard = false;
 	io.WantCaptureMouse = false;
@@ -283,28 +324,31 @@ void UserInterfaceHook::ThreadCheck()
 	} while (bInitialized == false);
 }
 
-void UserInterfaceHook::SetGuiInfo(std::string _WindowName, bool* _bOpenVariable, std::pair<float, float> _Size, std::function<void()> _ContentFn)
+void UserInterfaceHook::AddWindowInfo(std::string WindowName, bool* bOpenVariable, std::pair<float, float> Size, std::function<void()> ContentFn, ImGuiWindowFlags Flags)
 {
-	WindowName = _WindowName;
-	bOpenVariable = _bOpenVariable;
-	Size = _Size;
-	ContentFn = _ContentFn;
+	WindowInfos.push_back(UserInterfaceWindowInfo(WindowName, bOpenVariable, Size, ContentFn, Flags));
 }
 
-bool UserInterfaceHook::IsInfoSet()
+bool UserInterfaceHook::IsWindowInfoSet()
 {
-	if (ContentFn && bOpenVariable) {
-		return true;
+	if (WindowInfos.empty()) {
+		return false;
 	};
 
-	return false;
+	for (auto Info : WindowInfos) {
+		if (Info.IsInfoSet() == false) {
+			return false;
+		}
+	}
+	
+	return true;
 }
 
 void UserInterfaceHook::Initialize()
 {
 	// Public function to let the internal know when you should start the hook process
 
-	if (IsInfoSet()) {
+	if (IsWindowInfoSet()) {
 		bShouldInitialize = true;
 	}
 	else {
@@ -317,6 +361,17 @@ HWND UserInterfaceHook::GetGameWindow()
 	// Public function for if you need the game's HWND at any point. This is good because it is directly grabbed from DirectX.
 
 	return GameWindow;
+}
+
+bool UserInterfaceHook::IsAnyWindowOpen()
+{
+	for (auto Info : WindowInfos) {
+		if (Info.IsOpen()) {
+			return true;
+		}
+	}
+
+	return false;
 }
 
 UserInterfaceHook::UserInterfaceHook() : InternalThread(NULL)
