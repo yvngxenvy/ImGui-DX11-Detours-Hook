@@ -1,5 +1,20 @@
 #include "UserInterfaceHook.hpp"
 
+bool bWindowOpen = true;
+
+void ImGuiContent() {
+    if (ImGui::BeginChild("DebugChild", {})) {
+        ImGuiIO& io = ImGui::GetIO();
+        ImGui::Text("FPS: %.2f", io.Framerate);
+
+        static int testInt;
+        ImGui::InputInt("Integer", &testInt);
+        ImGui::Text("Your integer is %d", testInt);
+
+        ImGui::EndChild();
+    }
+}
+
 void Initialize(HMODULE hModule) {
     DisableThreadLibraryCalls(hModule);
     AllocConsole();
@@ -9,6 +24,7 @@ void Initialize(HMODULE hModule) {
     
     LOG("Initialized Console");
 
+    UIHook.SetGuiInfo("ImGui Template Window", &bWindowOpen, { 500.f, 500.f }, ImGuiContent);
     UIHook.Initialize();
 }
 

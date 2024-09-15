@@ -152,20 +152,16 @@ HRESULT UserInterfaceHook::PresentDetour(IDXGISwapChain* pSwapChain, UINT SyncIn
 
 	ImGui::SetNextWindowSize({ 500.f, 500.f }, ImGuiCond_Once); 
 
-	if (bWindowOpen) {
-		// All our imgui code
-		ImGui::Begin("ImGui Base Window", &bWindowOpen);
-		if (ImGui::BeginChild("DebugChild", {})) {
-			ImGuiIO& io = ImGui::GetIO();
-			ImGui::Text("FPS: %.2f", io.Framerate);
+	if (IsInfoSet()) {
+		if (*bOpenVariable) {
+			// Dynamically Render
+			ImGui::Begin(WindowName.c_str(), bOpenVariable);
+			
+			// Function passed by user
+			ContentFn();
 
-			static int testInt;
-			ImGui::InputInt("Integer", &testInt);
-			ImGui::Text("Your integer is %d", testInt);
-
-			ImGui::EndChild();
+			ImGui::End();
 		}
-		ImGui::End();
 	}
 
 	// End Render
@@ -194,7 +190,7 @@ LRESULT UserInterfaceHook::WndProc(const HWND hWnd, UINT uMsg, WPARAM wParam, LP
 	// WndProc trampoline
 
 	// I don't know if theres any method in the ImGui library that can check if any window is currently opened, but if there is, please lmk!
-	if (bWindowOpen == false) {
+	if (*bOpenVariable == false) {
 		return CallWindowProc(oWndProc, hWnd, uMsg, wParam, lParam);
 	}
 
@@ -287,11 +283,33 @@ void UserInterfaceHook::ThreadCheck()
 	} while (bInitialized == false);
 }
 
+void UserInterfaceHook::SetGuiInfo(std::string _WindowName, bool* _bOpenVariable, std::pair<float, float> _Size, std::function<void()> _ContentFn)
+{
+	WindowName = _WindowName;
+	bOpenVariable = _bOpenVariable;
+	Size = _Size;
+	ContentFn = _ContentFn;
+}
+
+bool UserInterfaceHook::IsInfoSet()
+{
+	if (ContentFn && bOpenVariable) {
+		return true;
+	};
+
+	return false;
+}
+
 void UserInterfaceHook::Initialize()
 {
 	// Public function to let the internal know when you should start the hook process
 
-	bShouldInitialize = true;
+	if (IsInfoSet()) {
+		bShouldInitialize = true;
+	}
+	else {
+		LOG("Unable to start initialization: no ImGui info Set!");
+	}
 }
 
 HWND UserInterfaceHook::GetGameWindow()
@@ -307,7 +325,6 @@ UserInterfaceHook::UserInterfaceHook() : InternalThread(NULL)
 
 	InternalThread = CreateThread(nullptr, 0, reinterpret_cast<LPTHREAD_START_ROUTINE>(ThreadCheck), nullptr, 0, nullptr);
 	VFTable = NULL;
-	bWindowOpen = true;
 
 	WindowClass.cbSize = sizeof(WNDCLASSEX);
 	WindowClass.style = CS_HREDRAW | CS_VREDRAW;

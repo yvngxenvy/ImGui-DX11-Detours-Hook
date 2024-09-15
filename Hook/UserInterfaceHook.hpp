@@ -25,7 +25,6 @@ private:
 	static inline bool bShouldInitialize;
 	static inline bool bInitialized;
 	static inline bool bReadyToPresent;
-	static inline bool bWindowOpen;
 	static inline bool bContextCreated; // Bool if ImGui Context is created. This is a nescessary check for WndProc
 
 	static inline HWND FakeWindow;
@@ -39,6 +38,12 @@ private:
 	static inline ID3D11Device* Device;
 	static inline ID3D11DeviceContext* DeviceContext;
 	static inline ID3D11RenderTargetView* RenderTargetView;
+
+	// New Variables For Dynamic GUI Loading
+	static inline std::string WindowName;
+	static inline bool* bOpenVariable;
+	static inline std::pair<float, float> Size;
+	static inline std::function<void()> ContentFn;
 
 	HANDLE InternalThread;
 private:
@@ -59,6 +64,9 @@ private:
 public:
 	static std::string GetStringStatus(DirectXHookStatus Error);
 	static HWND GetGameWindow();
+
+	static void SetGuiInfo(std::string _WindowName, bool* _bOpenVariable, std::pair<float, float> _Size, std::function<void()> _ContentFn);
+	static bool IsInfoSet();
 
 	static void Initialize();
 
