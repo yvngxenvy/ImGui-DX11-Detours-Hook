@@ -9,4 +9,4 @@ This hook creates a fake window and fetches the SwapChain VFTable (Virtual Funct
 
 > *For anyone wondering, this is the same hook I use in Logical (Rocket League Mod)*
 
-> *A lot of the code in this project was taken from [ImGui-DirectX-11-Kiero-Hook](https://github.com/rdbo/ImGui-DirectX-11-Kiero-Hook/blob/master/ImGui%20DirectX%2011%20Kiero%20Hook/main.cpp).*
+> *A lot of the code in this project was taken from [ImGui-DirectX-11-Kiero-Hook](https://github.com/rdbo/ImGui-DirectX-11-Kiero-Hook/blob/master/ImGui%20DirectX%2011%20Kiero%20Hook/main.cpp) and [kiero](https://github.com/Rebzzel/kiero).*
